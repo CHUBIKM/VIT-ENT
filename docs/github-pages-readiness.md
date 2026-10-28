@@ -15,9 +15,9 @@ The static frontend has no `/api`, `/login`, `/register`, SQLite or Node serial 
 ## Files and publishing
 
 - `npm run build`: copies an explicit list of seven public files into `dist/`, plus `.nojekyll`.
-- `npm run preview`: serves the result at `/ENT-Project-VIT-SMART/` as well as the local root.
-- `.github/workflows/pages.yml`: pushes to `web_dev` or manual dispatch, static tests, build, Pages artifact upload and deploy. No dependency install or API secret is required.
-- A repository administrator must select GitHub Actions in Settings → Pages. Pushes to `web_dev` trigger deployment; environment protection must allow that branch. Manual dispatch in the UI requires the workflow on the default branch.
+- `npm run preview`: serves the result at `/VIT-ENT/` as well as the local root.
+- `.github/workflows/pages.yml`: pushes to `main` or manual dispatch, static tests, build, Pages artifact upload and deploy. No dependency install or API secret is required.
+- A repository administrator must select GitHub Actions in Settings → Pages. Pushes to `main` trigger deployment; environment protection must allow that branch. Manual dispatch in the UI requires the workflow on the default branch.
 - Relative assets, navigation and module imports support the repository subpath. Only `dist/` is published; private research files, databases and `.env` are excluded.
 
 ## Live CORS checks
@@ -65,3 +65,7 @@ These checks establish software behavior only. No real person's movement, physic
 - [GitHub Pages custom workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)
 - [GitHub Pages publishing source](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
 - [DashScope endpoints and region-specific keys](https://help.aliyun.com/en/model-studio/base-url)
+
+## New repository
+
+The project now lives at `CHUBIKM/VIT-ENT`. `main` deploys to `https://chubikm.github.io/VIT-ENT/`; `web_dev` is the development branch. The historical CORS checks above used the old origin; the new deployment requires its own live acceptance.

@@ -22,7 +22,7 @@ npm run test:static
 npm start
 ```
 
-Open [http://localhost:4922/ENT-Project-VIT-SMART/](http://localhost:4922/ENT-Project-VIT-SMART/).
+Open [http://localhost:4922/VIT-ENT/](http://localhost:4922/VIT-ENT/).
 
 Individual commands:
 
@@ -46,11 +46,11 @@ On 2026-10-28, real browser requests from a locally simulated `https://peidong11
 
 ## GitHub Pages
 
-The prepared [workflow](.github/workflows/pages.yml) runs on pushes to **web_dev** (and manual dispatch) and publishes only `dist/`.
+The prepared [workflow](.github/workflows/pages.yml) runs on pushes to **main** (and manual dispatch) and publishes only `dist/`.
 
-1. Use `web_dev` for the static application and deployment workflow. The `main` branch remains the project evidence hub.
+1. `main` contains the deployable application and project evidence. Use `web_dev` for development, then merge into `main` to publish.
 2. In **Settings → Pages**, choose **GitHub Actions** as the publishing source.
-3. Push to `web_dev` to run **Deploy browser studio to Pages**. Ensure the `github-pages` environment allows `web_dev`. Manual dispatch in the Actions UI requires the workflow to also exist on the default branch.
+3. Push to `main` or dispatch **Deploy browser studio to Pages**. The `github-pages` environment must allow `main`.
 4. Verify the deployment URL, camera permission, video analysis and your own provider connection.
 
 No API key is needed in GitHub Secrets or the build. Do not publish the repository root: it contains backend files and project materials. The build excludes `.env`, databases, research documents and Node dependencies.
@@ -65,4 +65,8 @@ The older server tests remain available through `npm test` after installing nati
 
 VIT SMART is re-validating the value of EMG, pose and hybrid feedback. This static edition focuses on visible movement observations. Its joint angles are 2D estimates; visibility is not accuracy, and left–right differences are not proof of incorrect form, injury or fatigue.
 
-See the project's [Baseline Declaration](https://github.com/Peidong111/ENT-Project-VIT-SMART/blob/main/docs/01_Baseline/Baseline_Declaration.md) for the prior development cycle and unresolved evidence gaps.
+See the project's [Baseline Declaration](docs/01_Baseline/Baseline_Declaration.md) for the prior development cycle and unresolved evidence gaps.
+
+## Repository provenance
+
+Migrated to [CHUBIKM/VIT-ENT](https://github.com/CHUBIKM/VIT-ENT) from [Peidong111/ENT-Project-VIT-SMART](https://github.com/Peidong111/ENT-Project-VIT-SMART), preserving the application and evidence commit histories. The original repository is retained.

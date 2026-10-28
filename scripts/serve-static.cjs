@@ -1,10 +1,10 @@
 const http=require('node:http');const fs=require('node:fs');const path=require('node:path');
 const root=path.resolve(__dirname,'../dist');
 const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.svg':'image/svg+xml'};
-const prefix='/ENT-Project-VIT-SMART/';
+const prefix='/VIT-ENT/';
 const server=http.createServer((req,res)=>{
  let name;try{name=decodeURIComponent(new URL(req.url,'http://localhost').pathname);}catch{res.writeHead(400).end();return;}
- if(name==='/ENT-Project-VIT-SMART'){res.writeHead(302,{Location:prefix}).end();return;}
+ if(name==='/VIT-ENT'){res.writeHead(302,{Location:prefix}).end();return;}
  if(name.startsWith(prefix))name=name.slice(prefix.length);else name=name.slice(1);
  if(!name||name.endsWith('/'))name+='index.html';
  const file=path.resolve(root,name);

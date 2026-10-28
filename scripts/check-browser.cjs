@@ -3,13 +3,13 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 const root=path.resolve(__dirname,'../dist');
 const output=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'vit-static-check-'));
 console.log('Verification artifacts:',output);
-const origin='https://peidong111.github.io',base=origin+'/ENT-Project-VIT-SMART/';
+const origin='https://chubikm.github.io',base=origin+'/VIT-ENT/';
 const types={'.html':'text/html','.mjs':'text/javascript','.css':'text/css','.svg':'image/svg+xml'};
 (async()=>{
  const browser=await chromium.launch({channel:'chrome',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--enable-unsafe-swiftshader']});
  try{
   const context=await browser.newContext({viewport:{width:1440,height:1100},permissions:['camera']});
-  await context.route(origin+'/**',route=>{let name=new URL(route.request().url()).pathname.replace('/ENT-Project-VIT-SMART/','')||'index.html';const file=path.join(root,name);if(!file.startsWith(root)||!fs.existsSync(file))return route.fulfill({status:404,body:'Not found'});return route.fulfill({contentType:types[path.extname(file)],body:fs.readFileSync(file)});});
+  await context.route(origin+'/**',route=>{let name=new URL(route.request().url()).pathname.replace('/VIT-ENT/','')||'index.html';const file=path.join(root,name);if(!file.startsWith(root)||!fs.existsSync(file))return route.fulfill({status:404,body:'Not found'});return route.fulfill({contentType:types[path.extname(file)],body:fs.readFileSync(file)});});
   const page=await context.newPage();const errors=[],backend=[];
   page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(new URL(r.url()).origin===origin&&/\/api\/|\/login|\/register/.test(r.url()))backend.push(r.url());});
   await page.goto(base);await page.screenshot({path:path.join(output,'vit-static-landing.png'),fullPage:true});

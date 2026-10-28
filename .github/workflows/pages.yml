@@ -1,7 +1,7 @@
 name: Deploy browser studio to Pages
 on:
   push:
-    branches: [web_dev]
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
