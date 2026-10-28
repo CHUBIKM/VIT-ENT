@@ -4,9 +4,14 @@
   "description": "Simple portal demo with secure auth and SQLite",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "npm run build && npm run preview",
     "dev": "NODE_ENV=development node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "build": "node scripts/build-static.cjs",
+    "preview": "node scripts/serve-static.cjs",
+    "start:legacy": "node server.js",
+    "test:static": "node --test test/static*.test.mjs",
+    "test:browser": "node scripts/check-browser.cjs"
   },
   "keywords": [],
   "author": "",

@@ -111,7 +111,7 @@ test("qwen endpoint returns config error when API key is missing", async (t) => 
     context: "latest pose analysis context"
   });
 
-  assert.equal(response.status, 503);
+  assert.equal(response.status, 401);
   const body = await response.json();
   assert.equal(body.success, false);
 });
@@ -142,7 +142,7 @@ test("qwen stream endpoint returns config error when API key is missing", async 
     message: "hello"
   });
 
-  assert.equal(response.status, 503);
+  assert.equal(response.status, 401);
   const body = await response.json();
   assert.equal(body.success, false);
 });
@@ -286,7 +286,7 @@ test("latest pose LLM analysis endpoint returns config error when key missing", 
   const analyzeRes = await postJson(base, "/api/pose/sessions/latest/llm-analyze", {
     userEmail: "coach@example.com"
   });
-  assert.equal(analyzeRes.status, 503);
+  assert.equal(analyzeRes.status, 401);
   const analyzeBody = await analyzeRes.json();
   assert.equal(analyzeBody.success, false);
 });

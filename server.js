@@ -33,6 +33,12 @@ const DEFAULT_OPENAI_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/
 const DEFAULT_QWEN_MODEL = "qwen-plus";
 const DEFAULT_JSON_BODY_LIMIT = "2mb";
 
+function readRequestApiKey(req) {
+  const authorization = req.get("Authorization") || "";
+  const match = /^Bearer ([^\s]{1,512})$/.exec(authorization);
+  return match ? match[1] : null;
+}
+
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
 }
@@ -70,7 +76,8 @@ async function requestQwenChat({
   model,
   message,
   messages,
-  timeoutMs = 30000
+  timeoutMs = 30000,
+  fetchImpl = fetch
 }) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -80,7 +87,7 @@ async function requestQwenChat({
       ? messages
       : [{ role: "user", content: message }];
 
-    const response = await fetch(`${baseUrl.replace(/\/+$/, "")}/chat/completions`, {
+    const response = await fetchImpl(`${baseUrl.replace(/\/+$/, "")}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -131,7 +138,8 @@ async function streamQwenChat({
   message,
   messages,
   onToken,
-  timeoutMs = 60000
+  timeoutMs = 60000,
+  fetchImpl = fetch
 }) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -141,7 +149,7 @@ async function streamQwenChat({
       ? messages
       : [{ role: "user", content: message }];
 
-    const response = await fetch(`${baseUrl.replace(/\/+$/, "")}/chat/completions`, {
+    const response = await fetchImpl(`${baseUrl.replace(/\/+$/, "")}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -323,14 +331,14 @@ function createApp(options = {}) {
       return res.status(400).json({ success: false, message: "Message is too long (max 4000 chars)." });
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = readRequestApiKey(req);
     const baseUrl = process.env.OPENAI_BASE_URL || DEFAULT_OPENAI_BASE_URL;
     const model = process.env.QWEN_MODEL || DEFAULT_QWEN_MODEL;
 
     if (!apiKey) {
-      return res.status(503).json({
+      return res.status(401).json({
         success: false,
-        message: "OPENAI_API_KEY is not configured on the server."
+        message: "Enter your API key in Assistant settings."
       });
     }
 
@@ -344,12 +352,12 @@ function createApp(options = {}) {
     messages.push({ role: "user", content: message });
 
     try {
-      const reply = await requestQwenChat({ apiKey, baseUrl, model, messages, message });
+      const reply = await requestQwenChat({ apiKey, baseUrl, model, messages, message, fetchImpl: options.aiFetch });
       return res.json({ success: true, reply, model });
     } catch (error) {
       return res.status(502).json({
         success: false,
-        message: `Qwen request failed: ${error.message}`
+        message: "Qwen request failed. Check your key, quota, and provider availability."
       });
     }
   });
@@ -364,14 +372,14 @@ function createApp(options = {}) {
       return res.status(400).json({ success: false, message: "Message is too long (max 4000 chars)." });
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = readRequestApiKey(req);
     const baseUrl = process.env.OPENAI_BASE_URL || DEFAULT_OPENAI_BASE_URL;
     const model = process.env.QWEN_MODEL || DEFAULT_QWEN_MODEL;
 
     if (!apiKey) {
-      return res.status(503).json({
+      return res.status(401).json({
         success: false,
-        message: "OPENAI_API_KEY is not configured on the server."
+        message: "Enter your API key in Assistant settings."
       });
     }
 
@@ -390,6 +398,7 @@ function createApp(options = {}) {
 
     try {
       await streamQwenChat({
+        fetchImpl: options.aiFetch,
         apiKey,
         baseUrl,
         model,
@@ -404,10 +413,10 @@ function createApp(options = {}) {
       if (!res.headersSent) {
         return res.status(502).json({
           success: false,
-          message: `Qwen stream failed: ${error.message}`
+          message: "Qwen stream failed. Check your key, quota, and provider availability."
         });
       }
-      res.write(`\n\n[stream_error] ${error.message}`);
+      res.write("\n\n[stream_error] Provider connection interrupted.");
       return res.end();
     }
   });
@@ -529,13 +538,13 @@ function createApp(options = {}) {
       });
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = readRequestApiKey(req);
     const baseUrl = process.env.OPENAI_BASE_URL || DEFAULT_OPENAI_BASE_URL;
     const model = process.env.QWEN_MODEL || DEFAULT_QWEN_MODEL;
     if (!apiKey) {
-      return res.status(503).json({
+      return res.status(401).json({
         success: false,
-        message: "OPENAI_API_KEY is not configured on the server."
+        message: "Enter your API key in Assistant settings."
       });
     }
 
@@ -561,6 +570,7 @@ function createApp(options = {}) {
 
     try {
       const analysisText = await requestQwenChat({
+        fetchImpl: options.aiFetch,
         apiKey,
         baseUrl,
         model,
@@ -587,7 +597,7 @@ function createApp(options = {}) {
     } catch (error) {
       return res.status(502).json({
         success: false,
-        message: `LLM analysis failed: ${error.message}`
+        message: "LLM analysis failed. Check your key, quota, and provider availability."
       });
     }
   });

@@ -16,3 +16,6 @@ pnpm-debug.log*
 *.sqlite3
 *.db-wal
 *.db-shm
+
+# Static build output
+dist/
