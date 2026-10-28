@@ -1,6 +1,6 @@
 # GitHub Pages — static edition and verification
 
-Checked: 2026-10-28. Status: static build prepared and locally validated. No deployment has been triggered.
+Checked: 2026-10-28. Status: deployed and browser-validated at https://chubikm.github.io/VIT-ENT/.
 
 ## Architecture
 
@@ -68,4 +68,15 @@ These checks establish software behavior only. No real person's movement, physic
 
 ## New repository
 
-The project now lives at `CHUBIKM/VIT-ENT`. `main` deploys to `https://chubikm.github.io/VIT-ENT/`; `web_dev` is the development branch. The historical CORS checks above used the old origin; the new deployment requires its own live acceptance.
+The project now lives at `CHUBIKM/VIT-ENT`. `main` deploys to `https://chubikm.github.io/VIT-ENT/`; `web_dev` is the development branch. The historical CORS checks above used the old origin. The new deployed site passed live acceptance as recorded below.
+
+## Live acceptance — CHUBIKM/VIT-ENT
+
+- Deployed application commit: `860e5a5` (merged source/evidence histories).
+- Successful Actions run: https://github.com/CHUBIKM/VIT-ENT/actions/runs/40655969627
+- The real public site returned HTTP 200. Browser tests loaded the deployed HTML/modules directly, without interception of site resources.
+- Guest entry, subpath navigation, real MediaPipe model load, synthetic camera inference, generated local WebM analysis, automatic completion, stop, summary and JSON export passed.
+- Beijing and Singapore requests from the actual Pages origin returned readable HTTP 401 / `invalid_api_key` with the intentionally invalid test key. No real key or paid inference was used.
+- AI success display was tested separately with a mocked provider stream; live successful authenticated inference remains user-key-dependent.
+- Key validation, clearing, region-change clearing, refresh, mobile overflow checks, absence of legacy API calls and absence of uncaught page errors passed in the exercised flows.
+- Repeat against the public site with `LIVE_SITE=1 npm run test:browser` (requires Playwright and Chrome; set `PLAYWRIGHT_MODULE` if installed externally). Without `LIVE_SITE=1`, the script serves local build files at the same origin for isolated acceptance.

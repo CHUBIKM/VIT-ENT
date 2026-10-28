@@ -9,7 +9,7 @@ const types={'.html':'text/html','.mjs':'text/javascript','.css':'text/css','.sv
  const browser=await chromium.launch({channel:'chrome',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--enable-unsafe-swiftshader']});
  try{
   const context=await browser.newContext({viewport:{width:1440,height:1100},permissions:['camera']});
-  await context.route(origin+'/**',route=>{let name=new URL(route.request().url()).pathname.replace('/VIT-ENT/','')||'index.html';const file=path.join(root,name);if(!file.startsWith(root)||!fs.existsSync(file))return route.fulfill({status:404,body:'Not found'});return route.fulfill({contentType:types[path.extname(file)],body:fs.readFileSync(file)});});
+  if (process.env.LIVE_SITE !== '1') await context.route(origin+'/**',route=>{let name=new URL(route.request().url()).pathname.replace('/VIT-ENT/','')||'index.html';const file=path.join(root,name);if(!file.startsWith(root)||!fs.existsSync(file))return route.fulfill({status:404,body:'Not found'});return route.fulfill({contentType:types[path.extname(file)],body:fs.readFileSync(file)});});
   const page=await context.newPage();const errors=[],backend=[];
   page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(new URL(r.url()).origin===origin&&/\/api\/|\/login|\/register/.test(r.url()))backend.push(r.url());});
   await page.goto(base);await page.screenshot({path:path.join(output,'vit-static-landing.png'),fullPage:true});

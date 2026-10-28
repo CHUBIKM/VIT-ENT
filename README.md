@@ -1,5 +1,7 @@
 # VIT SMART — Movement Studio
 
+**Live site:** [chubikm.github.io/VIT-ENT](https://chubikm.github.io/VIT-ENT/)
+
 A browser-first exercise observation prototype for ENT303TC Team Technopreneurship. Open the studio as a guest, analyze movement locally, and optionally discuss a text summary with an AI model using your own API key.
 
 ## Browser edition
@@ -42,7 +44,7 @@ Camera access needs HTTPS or localhost. Internet access is required for the Medi
 
 Messages and a bounded recent conversation are sent directly to the provider. Generated explanations are not validated exercise or medical advice. Use a trusted browser/device for a browser-entered API key.
 
-On 2026-10-28, real browser requests from a locally simulated `https://peidong111.github.io` origin could read `401 invalid_api_key` responses from both supported regions. Beijing's explicit preflight also allowed POST and Authorization/Content-Type headers. This verifies the tested cross-origin request and error path, not a paid successful inference. See [deployment and verification notes](docs/github-pages-readiness.md).
+On 2026-10-28, real browser requests from the deployed `https://chubikm.github.io/VIT-ENT/` site could read `401 invalid_api_key` responses from both supported regions. Beijing's explicit preflight also allowed POST and Authorization/Content-Type headers. This verifies the tested cross-origin request and error path, not a paid successful inference. See [deployment and verification notes](docs/github-pages-readiness.md).
 
 ## GitHub Pages
 
