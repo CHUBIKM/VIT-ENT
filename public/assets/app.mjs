@@ -1,6 +1,6 @@
 import { mountEmg } from './emg.mjs';
 import { LocalSession, measurePose } from './pose.mjs';
-import { chat, credentials, ENDPOINTS } from './ai.mjs';
+import { chat, credentials, endpointUrl } from './ai.mjs';
 const $=id=>document.getElementById(id);
 const percent=n=>Math.round(n*100)+'%';
 const time=seconds=>`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(Math.floor(seconds%60)).padStart(2,'0')}`;
@@ -136,13 +136,18 @@ $('exportSummary').addEventListener('click',()=>{
  a.href=url;a.download='vit-smart-session.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
 $('explainSummary').addEventListener('click',()=>{location.hash='assistant';$('includeSummary').checked=true;$('chatInput').value='Help me understand this session. Describe what the observations can and cannot tell me, and suggest how to improve the camera setup.';$('chatInput').focus();});
-function configuration(){credentials($('apiKey').value,$('region').value,$('model').value);return {key:$('apiKey').value,region:$('region').value,model:$('model').value};}
+function configuration(){credentials($('apiKey').value,$('apiEndpoint').value,$('model').value);return {key:$('apiKey').value,endpoint:$('apiEndpoint').value,model:$('model').value};}
 function aiControls(busy){aiBusy=busy;$('sendChat').disabled=busy;$('testConnection').disabled=busy;$('cancelChat').hidden=!busy;}
 function addMessage(role,text){const div=document.createElement('div');div.className='message '+role;const title=document.createElement('span');title.className='message-author';title.textContent=role==='user'?'YOU':'VIT COMPANION';const p=document.createElement('p');p.textContent=text;div.append(title,p);$('chatLog').append(div);$('chatLog').scrollTop=$('chatLog').scrollHeight;return p;}
 $('apiKey').value='';
 function clearKey(){aiController?.abort();$('apiKey').value='';$('connectionStatus').textContent='Key cleared. It was not saved.';$('aiBadge').textContent='NOT CONNECTED';}
 $('clearKey').addEventListener('click',clearKey);
-$('region').addEventListener('change',()=>{clearKey();$('providerHost').textContent=new URL(ENDPOINTS[$('region').value]).host;$('connectionStatus').textContent='Region changed. Enter a key for this region.';});
+$('apiEndpoint').addEventListener('input',()=>{
+ clearKey();history.length=0;
+ try{$('providerHost').textContent='Requests go to: '+new URL(endpointUrl($('apiEndpoint').value)).host;}
+ catch{$('providerHost').textContent='Enter an HTTPS API address.';}
+ $('connectionStatus').textContent='API address changed. Enter a key for this provider.';
+});
 for(const id of ['apiKey','model'])$(id).addEventListener('input',()=>{$('aiBadge').textContent='NOT VERIFIED';});
 $('cancelChat').addEventListener('click',()=>aiController?.abort());
 async function send(test=false){
@@ -157,7 +162,7 @@ async function send(test=false){
  const messages=test?[{role:'user',content:message}]:[{role:'system',content:instruction},...history.slice(-8),{role:'user',content}];
  let output;
  if(!test){addMessage('user',message+(summary?'\n[Session summary included]':''));output=addMessage('assistant','Thinking…');$('chatInput').value='';}
- aiControls(true);aiController=new AbortController();$('chatStatus').textContent='Connecting directly to '+new URL(ENDPOINTS[config.region]).host+'…';
+ aiControls(true);aiController=new AbortController();$('chatStatus').textContent='Connecting directly to '+new URL(endpointUrl(config.endpoint)).host+'…';
  if(test)$('connectionStatus').textContent='Testing your key and model…';
  let text='';
  try{

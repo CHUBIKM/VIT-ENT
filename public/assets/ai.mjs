@@ -1,15 +1,18 @@
-export const ENDPOINTS = {
-  beijing: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-  singapore: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1'
-};
-export function credentials(key, region, model) {
-  if (!key?.trim() || /\s/.test(key.trim()) || key.trim().length>512) throw new Error('Enter a valid API key in Connection settings.');
-  if (!ENDPOINTS[region]) throw new Error('Select a supported region.');
-  if (!model?.trim() || model.trim().length>100) throw new Error('Enter a model name.');
-  return {key:key.trim(),base:ENDPOINTS[region],model:model.trim()};
+export function endpointUrl(endpoint){
+ let url;try{url=new URL(endpoint?.trim());}catch{throw new Error('Enter a valid HTTPS API base URL or chat/completions URL.');}
+ if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash)throw new Error('Use an HTTPS API URL without credentials, query parameters or fragments.');
+ url.pathname=url.pathname.replace(/\/+$/,'');
+ if(!url.pathname.endsWith('/chat/completions'))url.pathname+='/chat/completions';
+ return url.href;
 }
-export async function chat({key,region,model,messages,onToken=()=>{},signal,fetchImpl=fetch,timeoutMs=60000}) {
-  const config=credentials(key,region,model);
+export function credentials(key, endpoint, model) {
+  if (!key?.trim() || /\s/.test(key.trim()) || key.trim().length>512) throw new Error('Enter a valid API key in Connection settings.');
+  const url=endpointUrl(endpoint);
+  if (!model?.trim() || model.trim().length>100) throw new Error('Enter a model name.');
+  return {key:key.trim(),url,model:model.trim()};
+}
+export async function chat({key,endpoint,model,messages,onToken=()=>{},signal,fetchImpl=fetch,timeoutMs=60000}) {
+  const config=credentials(key,endpoint,model);
   const controller=new AbortController();
   const abort=()=>controller.abort();
   if(signal?.aborted) controller.abort(); else signal?.addEventListener('abort',abort,{once:true});
@@ -17,13 +20,13 @@ export async function chat({key,region,model,messages,onToken=()=>{},signal,fetc
   const timer=setTimeout(()=>{timedOut=true;controller.abort();},timeoutMs);
   let reader;
   try {
-    const response=await fetchImpl(config.base+'/chat/completions',{
+    const response=await fetchImpl(config.url,{
       method:'POST',mode:'cors',credentials:'omit',redirect:'error',cache:'no-store',
       headers:{'Content-Type':'application/json',Authorization:`Bearer ${config.key}`},
       body:JSON.stringify({model:config.model,messages,stream:true,max_tokens:1500,temperature:0.4}),signal:controller.signal
     });
     if(!response.ok) {
-      const errors={401:'API key was rejected. Check the key and its region.',403:'This key cannot access the selected model.',429:'Rate or quota limit reached. Check your provider account.'};
+      const errors={401:'API key was rejected. Check the key and API address.',403:'This key cannot access the selected model.',429:'Rate or quota limit reached. Check your provider account.'};
       throw new Error(errors[response.status]||`Provider returned HTTP ${response.status}. Check your model and provider status.`);
     }
     if(!response.body) throw new Error('The provider returned no response stream.');
@@ -48,7 +51,7 @@ export async function chat({key,region,model,messages,onToken=()=>{},signal,fetc
     return answer;
   } catch(error) {
     if(controller.signal.aborted)throw new Error(timedOut?'Request timed out. Try again.':'Request cancelled.');
-    if(error instanceof TypeError)throw new Error('Cannot reach the provider. Check network access and CORS support for this region.');
+    if(error instanceof TypeError)throw new Error('Cannot reach the provider. Check network access and CORS support for this API address (POST, Authorization and Content-Type).');
     throw error;
   } finally {
     clearTimeout(timer);signal?.removeEventListener('abort',abort);

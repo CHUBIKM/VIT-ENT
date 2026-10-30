@@ -27,7 +27,7 @@ const types={'.html':'text/html','.mjs':'text/javascript','.css':'text/css','.sv
   await page.locator('#apiKey').fill('ui-test-key');
   await page.route('https://dashscope.aliyuncs.com/**',r=>r.fulfill({contentType:'text/event-stream',body:'data: {"choices":[{"delta":{"content":"Test response"}}]}\n\ndata: [DONE]\n\n'}));
   await page.locator('#sendChat').click();await page.waitForFunction(()=>document.querySelector('#chatStatus').textContent==='Response complete.');
-  await page.locator('#region').selectOption('singapore');assert.equal(await page.locator('#apiKey').inputValue(),'');
+  await page.locator('#apiEndpoint').fill('https://dashscope-intl.aliyuncs.com/compatible-mode/v1');assert.equal(await page.locator('#apiKey').inputValue(),'');
   await page.locator('#apiKey').fill('ui-test-key');await page.locator('#clearKey').click();assert.equal(await page.locator('#apiKey').inputValue(),'');
   assert.equal(await page.evaluate(()=>localStorage.length+sessionStorage.length),0);
   await page.screenshot({path:path.join(output,'vit-static-assistant.png'),fullPage:true});

@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {angle, measurePose, LocalSession} from '../public/assets/pose.mjs';
-import {chat, credentials} from '../public/assets/ai.mjs';
-const key='test-only-key',region='beijing',model='qwen-plus',messages=[{role:'user',content:'hello'}];
-const config={key,region,model,messages};
+import {chat, credentials, endpointUrl} from '../public/assets/ai.mjs';
+const key='test-only-key',endpoint='https://dashscope.aliyuncs.com/compatible-mode/v1',model='qwen-plus',messages=[{role:'user',content:'hello'}];
+const config={key,endpoint,model,messages};
 const encoded=new TextEncoder();
 function response(chunks){return new Response(new ReadableStream({start(c){for(const s of chunks)c.enqueue(typeof s==='string'?encoded.encode(s):s);c.close();}}));}
 test('angles account for video aspect ratio and reject invisible or degenerate joints',()=>{
@@ -22,10 +22,12 @@ test('one sampled frame is counted once, including missing and partial poses',()
  const data=session.summary();assert.equal(data.samples,3);assert.equal(data.detectedRate,2/3);assert.equal(data.fullBodyRate,1/3);assert.ok(data.endedAt);assert.equal(data.angles.leftKnee.mean>=0,true);
  assert.equal(JSON.stringify(data).includes('key'),false);
 });
-test('missing key is rejected before sending and only allowlisted endpoints are accepted',async()=>{
+test('missing key and unsafe endpoint URLs are rejected before sending',async()=>{
  let sent=false;
  await assert.rejects(chat({...config,key:'',fetchImpl:()=>{sent=true;}}),/API key/);assert.equal(sent,false);
- assert.throws(()=>credentials(key,'https://example.com',model),/supported region/);
+ for(const address of ['http://example.com/v1','https://user:secret@example.com/v1','https://example.com/v1?key=secret','https://example.com/#fragment','not a url'])assert.throws(()=>credentials(key,address,model),/HTTPS/);
+ assert.equal(endpointUrl(' https://custom.example/api/v1/ '),'https://custom.example/api/v1/chat/completions');
+ assert.equal(endpointUrl('https://custom.example/v1/chat/completions/'),'https://custom.example/v1/chat/completions');
 });
 test('SSE parser handles split UTF-8, CRLF and final unterminated DONE; sends direct Bearer request',async()=>{
  const payload=encoded.encode('data: {"choices":[{"delta":{"content":"你好"}}]}\r\n\r\ndata: [DONE]');

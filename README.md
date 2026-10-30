@@ -9,8 +9,8 @@ A browser-first exercise observation prototype for ENT303TC Team Technopreneursh
 - **Guest workspace:** no registration, account database or server session.
 - **Local pose analysis:** camera or saved video, MediaPipe landmarks, image-plane joint angles and visibility statistics. Video never leaves the browser.
 - **Session summary:** bounded in-memory aggregates and observation notes, with JSON export. A new session replaces the previous one; reloading clears the workspace.
-- **Direct AI connection:** user-entered DashScope key, Beijing/Singapore region selection, model selection, streamed responses, connection test, cancellation and explicit error states.
-- **Private by default:** keys are not written to localStorage, sessionStorage, URLs, databases or build output. Changing region, clearing the key, or leaving/reloading the page removes it. AI requests go directly to the selected provider; no VIT SMART proxy is involved.
+- **Direct AI connection:** user-entered HTTPS API address and key (Chat Completions streaming compatible), model selection, streamed responses, connection test, cancellation and explicit error states.
+- **Private by default:** keys are not written to localStorage, sessionStorage, URLs, databases or build output. Changing the API address, clearing the key, or leaving/reloading the page removes it. AI requests go directly to the selected provider; no VIT SMART proxy is involved.
 - **Responsive interface:** landing page, movement studio, local summary and AI companion; usable under a GitHub Pages repository subpath.
 
 The static interface includes a browser Web Serial CH1 waveform module, a clearly labeled synthetic demo, pasted-data parsing and CSV export. Node serial-port controls and account login remain excluded. The existing backend source is retained separately for development/reference and is not shipped to Pages.
@@ -38,13 +38,13 @@ Camera access needs HTTPS or localhost. Internet access is required for the Medi
 ## Connect AI
 
 1. Open **AI companion**.
-2. Select the region matching your DashScope key and enter an available model (default: `qwen-plus`).
+2. Enter your provider’s HTTPS API base URL (e.g. `https://your-provider.example/v1`) or full `/chat/completions` URL, then its model name. The default address/model use DashScope / `qwen-plus`.
 3. Enter your own API key. **Test connection** sends a small model request and may consume API credits.
 4. Send a message. Enable **Include current session summary** only when you want that structured text shared. Video is never sent.
 
-Messages and a bounded recent conversation are sent directly to the provider. Generated explanations are not validated exercise or medical advice. Use a trusted browser/device for a browser-entered API key.
+The API must support Chat Completions SSE streaming and browser CORS for POST with Authorization and Content-Type. Arbitrary providers are not guaranteed to allow direct browser requests; a browser network/CORS failure cannot be bypassed by this static site. Messages and a bounded recent conversation are sent directly to the entered provider. Changing its address clears the key and conversation context. Generated explanations are not validated exercise or medical advice. Use a trusted browser/device for a browser-entered API key.
 
-On 2026-10-28, real browser requests from the deployed `https://chubikm.github.io/VIT-ENT/` site could read `401 invalid_api_key` responses from both supported regions. Beijing's explicit preflight also allowed POST and Authorization/Content-Type headers. This verifies the tested cross-origin request and error path, not a paid successful inference. See [deployment and verification notes](docs/github-pages-readiness.md).
+On 2026-10-28, real browser requests from the deployed `https://chubikm.github.io/VIT-ENT/` site could read `401 invalid_api_key` responses from both DashScope regions. Beijing's explicit preflight also allowed POST and Authorization/Content-Type headers. This verifies the tested cross-origin request and error path, not a paid successful inference. See [deployment and verification notes](docs/github-pages-readiness.md).
 
 ## GitHub Pages
 
