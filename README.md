@@ -13,7 +13,7 @@ A browser-first exercise observation prototype for ENT303TC Team Technopreneursh
 - **Private by default:** keys are not written to localStorage, sessionStorage, URLs, databases or build output. Changing region, clearing the key, or leaving/reloading the page removes it. AI requests go directly to the selected provider; no VIT SMART proxy is involved.
 - **Responsive interface:** landing page, movement studio, local summary and AI companion; usable under a GitHub Pages repository subpath.
 
-EMG acquisition, Node serial-port controls and account login are excluded from the static interface. The existing backend source is retained separately for development/reference and is not shipped to Pages.
+The static interface includes a browser Web Serial CH1 waveform module, a clearly labeled synthetic demo, pasted-data parsing and CSV export. Node serial-port controls and account login remain excluded. The existing backend source is retained separately for development/reference and is not shipped to Pages.
 
 ## Run locally
 
@@ -72,3 +72,13 @@ See the project's [Baseline Declaration](docs/01_Baseline/Baseline_Declaration.m
 ## Repository provenance
 
 Migrated to [CHUBIKM/VIT-ENT](https://github.com/CHUBIKM/VIT-ENT) from [Peidong111/ENT-Project-VIT-SMART](https://github.com/Peidong111/ENT-Project-VIT-SMART), preserving the application and evidence commit histories. The original repository is retained.
+
+## EMG frontend
+
+Open **EMG waveform**. Desktop Chrome/Edge with Web Serial can select a local serial device (default 115200 baud, 8-N-1). No Node service is used. Unsupported browsers can still use pasted data and the explicitly labeled synthetic demo.
+
+Accepted newline-terminated formats: `CH1:123`, `channel 1=123`, numeric CSV (CH1 is the first column), or a single numeric value. CR/LF/CRLF and fragmented reads are supported. Unlike the old parser, diagnostic lines such as `error 404` are ignored. A partial line waits for its delimiter; firmware without line endings must be adjusted before using this mode.
+
+The waveform retains the latest 512 received samples; the x-axis is sample order, not elapsed time. The raw signal is preserved alongside legacy display smoothing (alpha 0.22, step clamp 240). Export includes data source and browser receipt timestamps. Simulated exports remain labeled after stopping. No fatigue classification or automatic AI sharing is performed.
+
+Frontend tests cover formats, framing, bounded buffering, filtering, mocked serial disconnect/unplug/reconnect and mobile layout. Physical CH340/EMG acquisition has not been verified.

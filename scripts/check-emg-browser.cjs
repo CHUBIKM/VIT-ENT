@@ -1,0 +1,26 @@
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+(async()=>{const browser=await chromium.launch({channel:'chrome',headless:true});try{
+ const context=await browser.newContext({viewport:{width:1440,height:1000}});
+ if(process.env.LIVE_SITE!=='1')await context.route('https://chubikm.github.io/VIT-ENT/**',r=>{const f=path.join(path.resolve(__dirname,'../dist'),new URL(r.request().url()).pathname.replace('/VIT-ENT/',''));r.fulfill({body:fs.readFileSync(f),contentType:f.endsWith('.mjs')?'text/javascript':f.endsWith('.css')?'text/css':f.endsWith('.svg')?'image/svg+xml':'text/html'});});
+ await context.addInitScript(()=>{window.closedPorts=0;Object.defineProperty(navigator,'serial',{value:{requestPort:async()=>({readable:new ReadableStream({start(c){window.serialController=c;}}),open:async options=>{window.serialOptions=options;},close:async()=>{window.closedPorts++;}})}});});
+ const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('https://chubikm.github.io/VIT-ENT/dashboard.html#emg');
+ await page.locator('#emgText').fill('CH1:100\n200,300\nerror 404\nchannel 1:400');await page.locator('#emgParse').click();
+ await page.waitForFunction(()=>document.querySelector('#emgCount').textContent==='3');assert.equal(await page.locator('#emgInvalid').textContent(),'1');
+ await page.locator('#emgConnect').click();await page.waitForFunction(()=>document.querySelector('#emgSource').textContent==='LIVE SERIAL');
+ assert.equal(await page.evaluate(()=>serialOptions.baudRate),115200);
+ await page.evaluate(()=>serialController.enqueue(new TextEncoder().encode('CH1:12')));await page.waitForFunction(()=>document.querySelector('#emgCount').textContent==='0');
+ await page.evaluate(()=>serialController.enqueue(new TextEncoder().encode('34\r\nCH1:50\n')));await page.waitForFunction(()=>document.querySelector('#emgCount').textContent==='2');
+ await page.locator('#emgStop').click();await page.waitForFunction(()=>closedPorts===1);assert.equal(await page.locator('#emgConnect').isEnabled(),true);
+ await page.locator('#emgConnect').click();await page.waitForFunction(()=>document.querySelector('#emgSource').textContent==='LIVE SERIAL');await page.evaluate(()=>serialController.error(new Error('unplugged')));await page.waitForFunction(()=>closedPorts===2);
+ assert.equal(await page.locator('#emgDemo').textContent(),'Start capture');await page.locator('#emgDemo').click();await page.waitForFunction(()=>Number(document.querySelector('#emgCount').textContent)>20);await page.locator('#emgStop').click();
+ assert.equal(await page.locator('#emgSource').textContent(),'SIMULATED · STOPPED');const pending=page.waitForEvent('download');await page.locator('#emgExport').click();const download=await pending;assert.equal(download.suggestedFilename(),'emg-simulated.csv');await download.saveAs(path.join(require('node:os').tmpdir(),'vit-emg-export.csv'));assert.match(fs.readFileSync(path.join(require('node:os').tmpdir(),'vit-emg-export.csv'),'utf8'),/simulated,/);
+ const firstRun=fs.readFileSync(path.join(require('node:os').tmpdir(),'vit-emg-export.csv'),'utf8').trim().split('\n').slice(1).map(line=>line.split(',')[2]);
+ await page.locator('#emgDemo').click();await page.waitForFunction(()=>Number(document.querySelector('#emgCount').textContent)>20);await page.locator('#emgStop').click();
+ const secondDownload=page.waitForEvent('download');await page.locator('#emgExport').click();const second=await secondDownload;const secondPath=await second.path();const secondRun=fs.readFileSync(secondPath,'utf8').trim().split('\n').slice(1).map(line=>line.split(',')[2]);assert.notDeepEqual(firstRun.slice(0,20),secondRun.slice(0,20),'captures should have random variation');
+ await page.screenshot({path:path.join(require('node:os').tmpdir(),'vit-emg-desktop.png'),fullPage:true});
+ await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(require('node:os').tmpdir(),'vit-emg-mobile.png'),fullPage:true});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+ await page.locator('[data-view="studio"]').click();await page.locator('#studioView').waitFor({state:'visible'});assert.deepEqual(errors,[]);
+ console.log('PASS paste, fragmented serial, baud, disconnect/unplug/reconnect, simulated export provenance, mobile and navigation');
+}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

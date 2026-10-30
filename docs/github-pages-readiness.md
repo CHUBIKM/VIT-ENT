@@ -14,7 +14,7 @@ The static frontend has no `/api`, `/login`, `/register`, SQLite or Node serial 
 
 ## Files and publishing
 
-- `npm run build`: copies an explicit list of seven public files into `dist/`, plus `.nojekyll`.
+- `npm run build`: copies an explicit list of eight public files into `dist/`, plus `.nojekyll`.
 - `npm run preview`: serves the result at `/VIT-ENT/` as well as the local root.
 - `.github/workflows/pages.yml`: pushes to `main` or manual dispatch, static tests, build, Pages artifact upload and deploy. No dependency install or API secret is required.
 - A repository administrator must select GitHub Actions in Settings → Pages. Pushes to `main` trigger deployment; environment protection must allow that branch. Manual dispatch in the UI requires the workflow on the default branch.
@@ -80,3 +80,7 @@ The project now lives at `CHUBIKM/VIT-ENT`. `main` deploys to `https://chubikm.g
 - AI success display was tested separately with a mocked provider stream; live successful authenticated inference remains user-key-dependent.
 - Key validation, clearing, region-change clearing, refresh, mobile overflow checks, absence of legacy API calls and absence of uncaught page errors passed in the exercised flows.
 - Repeat against the public site with `LIVE_SITE=1 npm run test:browser` (requires Playwright and Chrome; set `PLAYWRIGHT_MODULE` if installed externally). Without `LIVE_SITE=1`, the script serves local build files at the same origin for isolated acceptance.
+
+## EMG frontend addition — 2026-10-30
+
+A Web Serial CH1 module is now prepared in development, alongside local paste/demo inputs and CSV export. It has no Node API dependency. Frontend tests use a mocked serial stream, not physical hardware. Web Serial requires a supporting browser and a secure context; see https://developer.chrome.com/docs/capabilities/serial. The capture button is labeled `Start capture`; generated samples retain simulated provenance. Run `LIVE_SITE=1 node scripts/check-emg-browser.cjs` with `PLAYWRIGHT_MODULE` to verify the deployed assets, paste parsing, mocked serial framing/reconnection, random captures, CSV export and mobile layout.

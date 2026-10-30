@@ -1,3 +1,4 @@
+import { mountEmg } from './emg.mjs';
 import { LocalSession, measurePose } from './pose.mjs';
 import { chat, credentials, ENDPOINTS } from './ai.mjs';
 const $=id=>document.getElementById(id);
@@ -11,8 +12,8 @@ let aiController=null,aiBusy=false;const history=[];
 const video=$('poseVideo'),canvas=$('poseCanvas'),ctx=canvas.getContext('2d');
 function setStatus(message,error=false){$('poseStatus').textContent=message;$('poseStatus').classList.toggle('error',error);}
 function navigate(){
- const view=['studio','summary','assistant'].includes(location.hash.slice(1))?location.hash.slice(1):'studio';
- for(const name of ['studio','summary','assistant']) $(name+'View').hidden=name!==view;
+ const view=['studio','summary','assistant','emg'].includes(location.hash.slice(1))?location.hash.slice(1):'studio';
+ for(const name of ['studio','summary','assistant','emg']) $(name+'View').hidden=name!==view;
  document.querySelectorAll('[data-view]').forEach(a=>{a.classList.toggle('active',a.dataset.view===view);if(a.dataset.view===view)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
  if(view==='summary')renderSummary();
 }
@@ -172,3 +173,5 @@ async function send(test=false){
 $('chatForm').addEventListener('submit',event=>{event.preventDefault();send();});
 $('testConnection').addEventListener('click',()=>send(true));
 window.addEventListener('pagehide',()=>{clearKey();stopCapture('Session ended.');});
+
+mountEmg();
