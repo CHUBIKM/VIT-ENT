@@ -84,3 +84,13 @@ The project now lives at `CHUBIKM/VIT-ENT`. `main` deploys to `https://chubikm.g
 ## EMG frontend addition — 2026-10-30
 
 A Web Serial CH1 module is now prepared in development, alongside local paste/demo inputs and CSV export. It has no Node API dependency. Frontend tests use a mocked serial stream, not physical hardware. Web Serial requires a supporting browser and a secure context; see https://developer.chrome.com/docs/capabilities/serial. The capture button is labeled `Start capture`; generated samples retain simulated provenance. Run `LIVE_SITE=1 node scripts/check-emg-browser.cjs` with `PLAYWRIGHT_MODULE` to verify the deployed assets, paste parsing, mocked serial framing/reconnection, random captures, CSV export and mobile layout.
+
+
+### EMG live acceptance — 2026-10-30
+
+- Deployed application commit: `4bfd52b`.
+- Successful Pages run: https://github.com/CHUBIKM/VIT-ENT/actions/runs/41081741600 (manually dispatched after push).
+- Loaded the actual Pages HTML and modules without resource interception. The deployed EMG module SHA-256 matched the local source.
+- `Start capture`, two distinct randomized captures, stopping/restarting, simulated-source CSV export, pasted CH1/CSV parsing, invalid-line handling, mobile overflow and Studio navigation passed without uncaught page errors.
+- Mocked Web Serial tests on the live page passed: 115200 baud, fragmented input, disconnect, unplug and reconnect. These do not validate physical hardware or real EMG signal quality.
+- Static unit tests: 11 passed. Browser evidence screenshots and CSV are generated in the operating system temporary directory by `scripts/check-emg-browser.cjs`.
