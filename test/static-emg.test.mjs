@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseCh1,EmgLines,EmgSamples} from '../public/assets/emg.mjs';
+import {parseCh1,EmgLines,EmgSamples,signalColor,signalSegments} from '../public/assets/emg.mjs';
 test('CH1 parser supports legacy formats without treating diagnostic numbers as samples',()=>{
  for(const [line,want] of [['CH1:1200',1200],['channel 1=-12.5',-12.5],['1,2,3',1],['-3',-3],['CH2:50 CH1:125',125],['CH1:1e3',1000],['error 404',null],['CH2:1200',null],['CH1:123abc',null],['NaN',null],['1e999',null]])assert.equal(parseCh1(line),want,line);
 });
@@ -18,4 +18,15 @@ test('display smoothing preserves raw values and limits retained samples',()=>{
  const data=new EmgSamples();data.add(0,0);data.add(1000,1);assert.equal(data.points[1].raw,1000);assert.equal(data.points[1].filtered,52.8);
  for(let i=0;i<1000;i++)data.add(i,i);assert.equal(data.points.length,512);assert.equal(data.count,1002);
  data.clear();assert.equal(data.points.length,0);assert.equal(data.filtered,null);
+});
+
+test('signal colors split ascending and descending lines at exact thresholds',()=>{
+ assert.equal(signalColor(0),'#23834b');assert.equal(signalColor(99),'#23834b');
+ assert.equal(signalColor(100),'#b58200');assert.equal(signalColor(1000),'#b58200');
+ assert.equal(signalColor(1001),'#d3423f');assert.equal(signalColor(-1),'#738078');
+ const ascending=signalSegments(0,2000);
+ assert.deepEqual(ascending.map(s=>s.color),['#23834b','#b58200','#d3423f']);
+ assert.deepEqual(ascending.map(s=>s.to),[.05,.5,1]);
+ assert.deepEqual(signalSegments(2000,0).map(s=>s.color),['#d3423f','#b58200','#23834b']);
+ assert.equal(signalSegments(100,100)[0].color,'#b58200');
 });

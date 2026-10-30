@@ -1,3 +1,15 @@
+// Colors describe device-value ranges, not physiological risk.
+export function signalColor(value){
+ return value<0?'#738078':value<100?'#23834b':value<=1000?'#b58200':'#d3423f';
+}
+export function signalSegments(start,end){
+ const cuts=[0,1];
+ if(start!==end)for(const threshold of [0,100,1000]){
+  const t=(threshold-start)/(end-start);if(t>0&&t<1)cuts.push(t);
+ }
+ cuts.sort((a,b)=>a-b);
+ return cuts.slice(1).map((to,i)=>({from:cuts[i],to,color:signalColor(start+(end-start)*(cuts[i]+to)/2)}));
+}
 // CH1 text protocol from the legacy dashboard, with strict numeric framing.
 const NUMBER='[+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?';
 export function parseCh1(line){
@@ -50,10 +62,22 @@ export function mountEmg(){
   const margin=Math.max((max-min)*.1,1);min-=margin;max+=margin;
   ctx.font='10px system-ui';ctx.lineWidth=1;
   for(let i=0;i<=4;i++){const y=top+(bottom-top)*i/4;ctx.strokeStyle='#e4e9e0';ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(right,y);ctx.stroke();ctx.fillStyle='#738078';ctx.fillText((max-(max-min)*i/4).toFixed(0),2,y+3);}
-  for(const [key,color] of [['raw','#b2c4a2'],['filtered','#285c48']]){
-   ctx.strokeStyle=color;ctx.lineWidth=key==='raw'?1:2;ctx.beginPath();
-   points.forEach((p,i)=>{const x=pad+(right-pad)*i/Math.max(1,points.length-1),y=bottom-(p[key]-min)/(max-min)*(bottom-top);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();
+  const x=i=>pad+(right-pad)*i/Math.max(1,points.length-1);
+  const y=value=>bottom-(value-min)/(max-min)*(bottom-top);
+  // Keep the smoothing reference subdued; the raw signal carries the range colors.
+  ctx.strokeStyle='#738078';ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.beginPath();
+  points.forEach((p,i)=>{i?ctx.lineTo(x(i),y(p.filtered)):ctx.moveTo(x(i),y(p.filtered));});ctx.stroke();ctx.setLineDash([]);
+  ctx.lineWidth=2.5;
+  for(let i=1;i<points.length;i++){
+   const a=points[i-1].raw,b=points[i].raw;
+   for(const segment of signalSegments(a,b)){
+    ctx.strokeStyle=segment.color;ctx.beginPath();
+    ctx.moveTo(x(i-1+segment.from),y(a+(b-a)*segment.from));
+    ctx.lineTo(x(i-1+segment.to),y(a+(b-a)*segment.to));ctx.stroke();
+   }
   }
+  if(points.length===1){ctx.fillStyle=signalColor(points[0].raw);ctx.beginPath();ctx.arc(x(0),y(points[0].raw),3,0,Math.PI*2);ctx.fill();}
+  $('emgRaw').style.color=points.length?signalColor(points.at(-1).raw):'';
   if(!points.length){ctx.fillStyle='#738078';ctx.textAlign='center';ctx.fillText('Connect a device, start a demo, or paste samples below.',width/2,height/2);ctx.textAlign='left';}
   $('emgRaw').textContent=points.length?String(points.at(-1).raw):'—';$('emgCount').textContent=String(samples.count);
   $('emgInvalid').textContent=String(samples.invalid);$('emgExport').disabled=!points.length;
