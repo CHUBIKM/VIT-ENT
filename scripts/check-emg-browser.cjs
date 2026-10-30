@@ -7,7 +7,7 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
  const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('https://chubikm.github.io/VIT-ENT/dashboard.html#emg');
  await page.locator('#emgText').fill('CH1:100\n200,300\nerror 404\nchannel 1:400');await page.locator('#emgParse').click();
- await page.waitForFunction(()=>document.querySelector('#emgCount').textContent==='3');assert.equal(await page.locator('#emgInvalid').textContent(),'1');
+ await page.waitForFunction(()=>document.querySelector('#emgCount').textContent==='3');assert.equal(await page.locator('#emgInvalid').textContent(),'1');assert.equal(await page.locator('#emgShare-yellow').textContent(),'100.0%');assert.equal(await page.locator('#emgShare-green').textContent(),'0.0%');
  await page.locator('#emgConnect').click();await page.waitForFunction(()=>document.querySelector('#emgSource').textContent==='LIVE SERIAL');
  assert.equal(await page.evaluate(()=>serialOptions.baudRate),115200);
  await page.evaluate(()=>serialController.enqueue(new TextEncoder().encode('CH1:12')));await page.waitForFunction(()=>document.querySelector('#emgCount').textContent==='0');

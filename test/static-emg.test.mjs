@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseCh1,EmgLines,EmgSamples,signalColor,signalSegments,demoSample} from '../public/assets/emg.mjs';
+import {parseCh1,EmgLines,EmgSamples,signalColor,signalSegments,demoSample,windowDistribution} from '../public/assets/emg.mjs';
 test('CH1 parser supports legacy formats without treating diagnostic numbers as samples',()=>{
  for(const [line,want] of [['CH1:1200',1200],['channel 1=-12.5',-12.5],['1,2,3',1],['-3',-3],['CH2:50 CH1:125',125],['CH1:1e3',1000],['error 404',null],['CH2:1200',null],['CH1:123abc',null],['NaN',null],['1e999',null]])assert.equal(parseCh1(line),want,line);
 });
@@ -41,4 +41,20 @@ test('demo spends visible time in each color range and stays nonnegative',()=>{
   assert.ok(values.every(v=>Number.isFinite(v)&&v>=0));
  }
  assert.notEqual(demoSample(125,()=>0),demoSample(125,()=>1));
+});
+
+test('window shares use only retained raw samples and reset with the buffer',()=>{
+ const data=new EmgSamples();[0,99,100,1000,1001,-2].forEach(v=>data.add(v));
+ assert.deepEqual(windowDistribution(data.points),{counts:{green:2,yellow:2,red:1,other:1},total:6});
+ for(let i=0;i<512;i++)data.add(50);
+ assert.deepEqual(windowDistribution(data.points),{counts:{green:512,yellow:0,red:0,other:0},total:512});
+ data.clear();assert.equal(windowDistribution(data.points).total,0);
+});
+test('two major pulses precede a yellow-only minor spike even at noise extremes',()=>{
+ for(const random of [()=>0,()=>1]){
+  assert.ok(demoSample(Math.round(.22*512),random)>1000);
+  assert.ok(demoSample(Math.round(.55*512),random)>1000);
+  assert.ok(demoSample(Math.round(.82*512),random)>100);
+  for(let i=Math.ceil(.7*512);i<512;i++)assert.ok(demoSample(i,random)<1000);
+ }
 });

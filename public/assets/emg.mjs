@@ -42,11 +42,16 @@ export class EmgSamples{
   this.points.push({at,raw:value,filtered:this.filtered});if(this.points.length>512)this.points.shift();this.count++;
  }
 }
-// One 512-sample window (20.48 seconds): mostly green with a brief red peak.
+export function windowDistribution(points){
+ const counts={green:0,yellow:0,red:0,other:0};
+ for(const {raw} of points)counts[raw<0?'other':raw<100?'green':raw<=1000?'yellow':'red']++;
+ return {counts,total:points.length};
+}
+// One window: two major pulses followed by one yellow-only minor pulse.
 export function demoSample(tick,random=Math.random){
  const phase=(tick%512)/512;
- const envelope=((1-Math.cos(2*Math.PI*phase))/2)**12;
- const baseline=45+1200*envelope;
+ const pulse=(center,width)=>Math.abs(phase-center)<width?Math.cos((phase-center)/width*Math.PI/2)**4:0;
+ const baseline=45+1200*(pulse(.22,.105)+pulse(.55,.105))+500*pulse(.82,.055);
  const noise=(random()+random()+random()-1.5)*(8+baseline*.06);
  return Math.round(Math.max(0,baseline+Math.sin(2*Math.PI*73*phase)*(4+baseline*.025)+noise));
 }
@@ -85,6 +90,13 @@ export function mountEmg(){
    }
   }
   if(points.length===1){ctx.fillStyle=signalColor(points[0].raw);ctx.beginPath();ctx.arc(x(0),y(points[0].raw),3,0,Math.PI*2);ctx.fill();}
+  const distribution=windowDistribution(points);
+  for(const name of ['green','yellow','red']){
+   const ratio=distribution.total?distribution.counts[name]/distribution.total*100:0;
+   $('emgShare-'+name).textContent=distribution.total?ratio.toFixed(1)+'%':'—';
+   $('emgBar-'+name).style.width=ratio+'%';
+  }
+  $('emgWindowCount').textContent=`Current window: ${distribution.total} / 512 samples`+(distribution.counts.other?` · ${distribution.counts.other} negative samples (gray)`:'');
   $('emgRaw').style.color=points.length?signalColor(points.at(-1).raw):'';
   if(!points.length){ctx.fillStyle='#738078';ctx.textAlign='center';ctx.fillText('Connect a device, start a demo, or paste samples below.',width/2,height/2);ctx.textAlign='left';}
   $('emgRaw').textContent=points.length?String(points.at(-1).raw):'—';$('emgCount').textContent=String(samples.count);
