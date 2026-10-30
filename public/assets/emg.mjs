@@ -42,6 +42,13 @@ export class EmgSamples{
   this.points.push({at,raw:value,filtered:this.filtered});if(this.points.length>512)this.points.shift();this.count++;
  }
 }
+// A ten-second envelope dwells in all three display ranges, with bounded noise.
+export function demoSample(tick,random=Math.random){
+ const envelope=((1-Math.cos(2*Math.PI*tick/250))/2)**3;
+ const baseline=45+1550*envelope;
+ const noise=(random()+random()+random()-1.5)*(8+baseline*.06);
+ return Math.round(Math.max(0,baseline+Math.sin(tick*.9)*(4+baseline*.025)+noise));
+}
 export function mountEmg(){
  const $=id=>document.getElementById(id),samples=new EmgSamples();
  let parser=new EmgLines(),port=null,reader=null,readTask=null,mode='idle',timer=null,epoch=0,frame=0,lastAt=0,dataSource='none';
@@ -123,14 +130,10 @@ export function mountEmg(){
  });
  $('emgStop').addEventListener('click',stop);
  $('emgDemo').addEventListener('click',()=>{
-  if(mode!=='idle')return;reset();dataSource='simulated';mode='demo';controls();let tick=0,drift=0,amplitude=1000;status('Synthetic demo only — not a measurement from a sensor.');
+  if(mode!=='idle')return;reset();dataSource='simulated';mode='demo';controls();let tick=0;status('Synthetic demo only — not a measurement from a sensor.');
   timer=setInterval(()=>{
    tick++;
-   drift=drift*.97+(Math.random()-.5)*50;
-   amplitude+=(850+Math.random()*300-amplitude)*.08;
-   const noise=(Math.random()+Math.random()+Math.random()-1.5)*220;
-   const value=1800+drift+amplitude*Math.sin(tick*.13)+180*Math.sin(tick*1.1)+noise;
-   accept(`CH1:${Math.round(value)}\n`);
+   accept(`CH1:${demoSample(tick)}\n`);
   },40);
  });
  $('emgParse').addEventListener('click',()=>{

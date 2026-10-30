@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseCh1,EmgLines,EmgSamples,signalColor,signalSegments} from '../public/assets/emg.mjs';
+import {parseCh1,EmgLines,EmgSamples,signalColor,signalSegments,demoSample} from '../public/assets/emg.mjs';
 test('CH1 parser supports legacy formats without treating diagnostic numbers as samples',()=>{
  for(const [line,want] of [['CH1:1200',1200],['channel 1=-12.5',-12.5],['1,2,3',1],['-3',-3],['CH2:50 CH1:125',125],['CH1:1e3',1000],['error 404',null],['CH2:1200',null],['CH1:123abc',null],['NaN',null],['1e999',null]])assert.equal(parseCh1(line),want,line);
 });
@@ -29,4 +29,13 @@ test('signal colors split ascending and descending lines at exact thresholds',()
  assert.deepEqual(ascending.map(s=>s.to),[.05,.5,1]);
  assert.deepEqual(signalSegments(2000,0).map(s=>s.color),['#d3423f','#b58200','#23834b']);
  assert.equal(signalSegments(100,100)[0].color,'#b58200');
+});
+
+test('demo spends visible time in each color range and stays nonnegative',()=>{
+ for(const random of [()=>0,()=>.5,()=>1]){
+  const values=Array.from({length:250},(_,i)=>demoSample(i,random));
+  for(const color of ['#23834b','#b58200','#d3423f'])assert.ok(values.filter(v=>signalColor(v)===color).length>=25,color);
+  assert.ok(values.every(v=>Number.isFinite(v)&&v>=0));
+ }
+ assert.notEqual(demoSample(125,()=>0),demoSample(125,()=>1));
 });
