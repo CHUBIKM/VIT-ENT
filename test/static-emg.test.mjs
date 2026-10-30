@@ -33,8 +33,11 @@ test('signal colors split ascending and descending lines at exact thresholds',()
 
 test('demo spends visible time in each color range and stays nonnegative',()=>{
  for(const random of [()=>0,()=>.5,()=>1]){
-  const values=Array.from({length:250},(_,i)=>demoSample(i,random));
-  for(const color of ['#23834b','#b58200','#d3423f'])assert.ok(values.filter(v=>signalColor(v)===color).length>=25,color);
+  const values=Array.from({length:512},(_,i)=>demoSample(i,random));
+  const green=values.filter(v=>v<100).length/512,red=values.filter(v=>v>1000).length/512;
+  assert.ok(green>.6&&green<.8);assert.ok(red>.03&&red<.15);
+  assert.ok(values.some(v=>v>=100&&v<=1000));
+  for(let i=0;i<512;i++)assert.equal(demoSample(i,random),demoSample(i+512,random));
   assert.ok(values.every(v=>Number.isFinite(v)&&v>=0));
  }
  assert.notEqual(demoSample(125,()=>0),demoSample(125,()=>1));

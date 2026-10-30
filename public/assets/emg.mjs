@@ -42,12 +42,13 @@ export class EmgSamples{
   this.points.push({at,raw:value,filtered:this.filtered});if(this.points.length>512)this.points.shift();this.count++;
  }
 }
-// A ten-second envelope dwells in all three display ranges, with bounded noise.
+// One 512-sample window (20.48 seconds): mostly green with a brief red peak.
 export function demoSample(tick,random=Math.random){
- const envelope=((1-Math.cos(2*Math.PI*tick/250))/2)**3;
- const baseline=45+1550*envelope;
+ const phase=(tick%512)/512;
+ const envelope=((1-Math.cos(2*Math.PI*phase))/2)**12;
+ const baseline=45+1200*envelope;
  const noise=(random()+random()+random()-1.5)*(8+baseline*.06);
- return Math.round(Math.max(0,baseline+Math.sin(tick*.9)*(4+baseline*.025)+noise));
+ return Math.round(Math.max(0,baseline+Math.sin(2*Math.PI*73*phase)*(4+baseline*.025)+noise));
 }
 export function mountEmg(){
  const $=id=>document.getElementById(id),samples=new EmgSamples();
