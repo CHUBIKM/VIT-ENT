@@ -136,7 +136,7 @@ $('exportSummary').addEventListener('click',()=>{
  a.href=url;a.download='vit-smart-session.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
 $('explainSummary').addEventListener('click',()=>{location.hash='assistant';$('includeSummary').checked=true;$('chatInput').value='Help me understand this session. Describe what the observations can and cannot tell me, and suggest how to improve the camera setup.';$('chatInput').focus();});
-function configuration(){credentials($('apiKey').value,$('apiEndpoint').value,$('model').value);return {key:$('apiKey').value,endpoint:$('apiEndpoint').value,model:$('model').value};}
+function configuration(){credentials($('apiKey').value,$('apiEndpoint').value,$('model').value);return {key:$('apiKey').value,endpoint:$('apiEndpoint').value,model:$('model').value,maxTokens:Number($('maxTokens').value)};}
 function aiControls(busy){aiBusy=busy;$('sendChat').disabled=busy;$('testConnection').disabled=busy;$('cancelChat').hidden=!busy;}
 function addMessage(role,text){const div=document.createElement('div');div.className='message '+role;const title=document.createElement('span');title.className='message-author';title.textContent=role==='user'?'YOU':'VIT COMPANION';const p=document.createElement('p');p.textContent=text;div.append(title,p);$('chatLog').append(div);$('chatLog').scrollTop=$('chatLog').scrollHeight;return p;}
 $('apiKey').value='';

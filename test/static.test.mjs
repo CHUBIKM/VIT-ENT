@@ -59,3 +59,22 @@ test('static app does not call the old backend or persist credentials',()=>{
   const html=readFileSync(new URL('../public/'+file,import.meta.url),'utf8');assert.doesNotMatch(html,/(?:src|href)="\/(?!\/)/);
  }
 });
+
+test('provider length and content-filter endings are not mistaken for successful completion',async()=>{
+ for(const [reason,pattern] of [['length',/truncated/],['content_filter',/content filter/]]){
+  let visible='';
+  await assert.rejects(chat({...config,onToken:t=>visible+=t,fetchImpl:async()=>response([
+   'data: {"choices":[{"delta":{"content":"Partial answer"}}]}\n',
+   'data: '+JSON.stringify({choices:[{delta:{},finish_reason:reason}]})+'\n',
+   'data: [DONE]\n'
+  ])}),pattern);
+  assert.equal(visible,'Partial answer');
+ }
+});
+test('custom output budget is sent and invalid budgets never trigger a request',async()=>{
+ await chat({...config,maxTokens:8192,fetchImpl:async(_url,options)=>{
+  assert.equal(JSON.parse(options.body).max_tokens,8192);
+  return response(['data: {"choices":[{"delta":{"content":"OK"},"finish_reason":"stop"}]}\ndata: [DONE]\n']);
+ }});
+ let sent=false;await assert.rejects(chat({...config,maxTokens:NaN,fetchImpl:()=>{sent=true;}}),/Output limit/);assert.equal(sent,false);
+});
