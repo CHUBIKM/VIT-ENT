@@ -33,14 +33,32 @@ export class EmgLines{
   return result;
  }
 }
+export const WINDOW_MS=20480;
+export const FRAME_MS=40;
 export class EmgSamples{
- constructor(){this.clear();}
- clear(){this.points=[];this.filtered=null;this.count=0;this.invalid=0;}
+ constructor({windowMs=0,capacity=512}={}){this.windowMs=windowMs;this.capacity=capacity;this.clear();}
+ clear(){this.buffer=[];this.head=0;this.filtered=null;this.count=0;this.invalid=0;this.dropped=0;}
+ get points(){return this.buffer.slice(this.head);}
  add(value,at=Date.now()){
   if(!Number.isFinite(value))return;
   this.filtered=this.filtered===null?value:this.filtered+Math.max(-240,Math.min(240,value-this.filtered))*0.22;
-  this.points.push({at,raw:value,filtered:this.filtered});if(this.points.length>512)this.points.shift();this.count++;
+  this.buffer.push({at,raw:value,filtered:this.filtered});this.count++;
+  while(this.windowMs&&this.buffer[this.head].at<at-this.windowMs)this.head++;
+  if(this.buffer.length-this.head>this.capacity){this.head++;this.dropped++;}
+  if(this.head>=4096){this.buffer=this.buffer.slice(this.head);this.head=0;}
  }
+}
+// Preserve first/last and raw min/max in each time bucket, rather than dropping peaks.
+export function displayPoints(points,start,end,buckets=512){
+ const selected=[];let group=[],bucket=-1;
+ function flush(){if(!group.length)return;let low=group[0],high=group[0];
+  for(const p of group){if(p.raw<low.raw)low=p;if(p.raw>high.raw)high=p;}
+  const keep=new Set([group[0],low,high,group.at(-1)]);
+  selected.push(...group.filter(p=>keep.has(p)));group=[];
+ }
+ for(const p of points){const index=Math.min(buckets-1,Math.max(0,Math.floor((p.at-start)/Math.max(1,end-start)*buckets)));
+  if(index!==bucket){flush();bucket=index;}group.push(p);
+ }flush();return selected;
 }
 export function windowDistribution(points){
  const counts={green:0,yellow:0,red:0,other:0};
@@ -56,8 +74,8 @@ export function demoSample(tick,random=Math.random){
  return Math.round(Math.max(0,baseline+Math.sin(2*Math.PI*73*phase)*(4+baseline*.025)+noise));
 }
 export function mountEmg(){
- const $=id=>document.getElementById(id),samples=new EmgSamples();
- let parser=new EmgLines(),port=null,reader=null,readTask=null,mode='idle',timer=null,epoch=0,frame=0,lastAt=0,dataSource='none';
+ const $=id=>document.getElementById(id),samples=new EmgSamples({windowMs:WINDOW_MS,capacity:100000});
+ let parser=new EmgLines(),port=null,reader=null,readTask=null,mode='idle',timer=null,epoch=0,frame=0,lastAt=0,dataSource='none',lastDraw=0,dirty=false,startedAt=0,latestLog='No incoming data.';
  const supported=Boolean(navigator.serial&&window.isSecureContext);
  const canvas=$('emgCanvas'),ctx=canvas.getContext('2d');
  function status(text){$('emgStatus').textContent=text;}
@@ -68,14 +86,21 @@ export function mountEmg(){
   $('emgSource').textContent={idle:({simulated:'SIMULATED · STOPPED',serial:'SERIAL · STOPPED',pasted:'PASTED DATA'}[dataSource]||'NO ACTIVE INPUT'),serial:'LIVE SERIAL',demo:'SIMULATED DATA',connecting:'SELECTING DEVICE',closing:'DISCONNECTING'}[mode];
  }
  function draw(){
-  frame=0;const width=canvas.clientWidth||600,height=280,dpr=devicePixelRatio||1;
+  const width=canvas.clientWidth||600,height=280,dpr=devicePixelRatio||1;
   canvas.width=width*dpr;canvas.height=height*dpr;ctx.scale(dpr,dpr);ctx.clearRect(0,0,width,height);
-  const points=samples.points,pad=45,right=width-16,top=20,bottom=height-30;
+  const rawPoints=samples.points;
+  const end=Math.max(startedAt+WINDOW_MS,rawPoints.at(-1)?.at||startedAt+WINDOW_MS),start=end-WINDOW_MS;
+  const points=dataSource==='pasted'?displayPoints(rawPoints.map((p,i)=>({...p,at:i})),0,Math.max(1,rawPoints.length-1)):displayPoints(rawPoints,start,end),pad=45,right=width-16,top=20,bottom=height-30;
   const all=points.flatMap(p=>[p.raw,p.filtered]);let min=all.length?Math.min(...all):0,max=all.length?Math.max(...all):1;
   const margin=Math.max((max-min)*.1,1);min-=margin;max+=margin;
   ctx.font='10px system-ui';ctx.lineWidth=1;
   for(let i=0;i<=4;i++){const y=top+(bottom-top)*i/4;ctx.strokeStyle='#e4e9e0';ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(right,y);ctx.stroke();ctx.fillStyle='#738078';ctx.fillText((max-(max-min)*i/4).toFixed(0),2,y+3);}
-  const x=i=>pad+(right-pad)*i/Math.max(1,points.length-1);
+  const x=i=>{
+   if(dataSource==='pasted')return pad+(right-pad)*i/Math.max(1,points.length-1);
+   const left=Math.floor(i),a=points[left],b=points[Math.min(left+1,points.length-1)];
+   const at=a.at+(b.at-a.at)*(i-left);return pad+(right-pad)*(at-start)/WINDOW_MS;
+  };
+  ctx.fillStyle='#738078';ctx.fillText(dataSource==='pasted'?'Pasted samples · sample order':'20.48-second window · browser receive time',pad,height-8);
   const y=value=>bottom-(value-min)/(max-min)*(bottom-top);
   // Keep the smoothing reference subdued; the raw signal carries the range colors.
   ctx.strokeStyle='#738078';ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.beginPath();
@@ -90,25 +115,33 @@ export function mountEmg(){
    }
   }
   if(points.length===1){ctx.fillStyle=signalColor(points[0].raw);ctx.beginPath();ctx.arc(x(0),y(points[0].raw),3,0,Math.PI*2);ctx.fill();}
-  const distribution=windowDistribution(points);
+  const distribution=windowDistribution(rawPoints);
   for(const name of ['green','yellow','red']){
    const ratio=distribution.total?distribution.counts[name]/distribution.total*100:0;
    $('emgShare-'+name).textContent=distribution.total?ratio.toFixed(1)+'%':'—';
    $('emgBar-'+name).style.width=ratio+'%';
   }
-  $('emgWindowCount').textContent=`Current window: ${distribution.total} / 512 samples`+(distribution.counts.other?` · ${distribution.counts.other} negative samples (gray)`:'');
+  $('emgWindowCount').textContent=`Current window: ${distribution.total} samples · 20.48 s`+(distribution.counts.other?` · ${distribution.counts.other} negative samples (gray)`:'');
+  $('emgLog').textContent=latestLog;
+  const elapsed=rawPoints.length>1?(rawPoints.at(-1).at-rawPoints[0].at)/1000:0;
+  $('emgTiming').textContent=`Receive rate: ${elapsed>=1?Math.round((rawPoints.length-1)/elapsed)+' samples/s':'measuring…'} · Render cap: 25 fps`+(samples.dropped?' · Buffer limit reached; older samples dropped':'');
   $('emgRaw').style.color=points.length?signalColor(points.at(-1).raw):'';
   if(!points.length){ctx.fillStyle='#738078';ctx.textAlign='center';ctx.fillText('Connect a device, start a demo, or paste samples below.',width/2,height/2);ctx.textAlign='left';}
   $('emgRaw').textContent=points.length?String(points.at(-1).raw):'—';$('emgCount').textContent=String(samples.count);
   $('emgInvalid').textContent=String(samples.invalid);$('emgExport').disabled=!points.length;
  }
- function update(){if(!frame)frame=requestAnimationFrame(draw);}
- function accept(text){
-  const lines=parser.feed(text);
-  for(const line of lines){if(line.value===null)samples.invalid++;else{samples.add(line.value);lastAt=Date.now();}}
-  if(lines.length){$('emgLog').textContent=lines.slice(-5).map(l=>(l.value===null?'Ignored: ':'CH1 '+l.value+' ← ')+l.raw.slice(0,140)).join('\n');update();}
+ function renderTick(now){
+  frame=0;if(!dirty)return;
+  if(now-lastDraw>=FRAME_MS){dirty=false;lastDraw=now;draw();}
+  if(dirty)frame=requestAnimationFrame(renderTick);
  }
- function reset(){samples.clear();parser=new EmgLines();lastAt=0;dataSource='none';$('emgLog').textContent='No incoming data.';update();}
+ function update(){dirty=true;if(!frame)frame=requestAnimationFrame(renderTick);}
+ function accept(text){
+  const lines=parser.feed(text);const receivedAt=Date.now();
+  for(const line of lines){if(line.value===null)samples.invalid++;else{samples.add(line.value,receivedAt);lastAt=receivedAt;}}
+  if(lines.length){latestLog=lines.slice(-5).map(l=>(l.value===null?'Ignored: ':'CH1 '+l.value+' ← ')+l.raw.slice(0,140)).join('\n');update();}
+ }
+ function reset(){samples.clear();parser=new EmgLines();lastAt=0;dataSource='none';startedAt=Date.now();latestLog='No incoming data.';update();}
  async function readLoop(active){
   const decoder=new TextDecoder();
   try{

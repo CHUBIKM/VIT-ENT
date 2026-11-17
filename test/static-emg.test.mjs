@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseCh1,EmgLines,EmgSamples,signalColor,signalSegments,demoSample,windowDistribution} from '../public/assets/emg.mjs';
+import {parseCh1,EmgLines,EmgSamples,signalColor,signalSegments,demoSample,windowDistribution,displayPoints,WINDOW_MS} from '../public/assets/emg.mjs';
 test('CH1 parser supports legacy formats without treating diagnostic numbers as samples',()=>{
  for(const [line,want] of [['CH1:1200',1200],['channel 1=-12.5',-12.5],['1,2,3',1],['-3',-3],['CH2:50 CH1:125',125],['CH1:1e3',1000],['error 404',null],['CH2:1200',null],['CH1:123abc',null],['NaN',null],['1e999',null]])assert.equal(parseCh1(line),want,line);
 });
@@ -57,4 +57,23 @@ test('two major pulses precede a yellow-only minor spike even at noise extremes'
   assert.ok(demoSample(Math.round(.82*512),random)>100);
   for(let i=Math.ceil(.7*512);i<512;i++)assert.ok(demoSample(i,random)<1000);
  }
+});
+
+test('real capture keeps a time window independent of receive rate',()=>{
+ for(const rate of [25,1000]){
+  const data=new EmgSamples({windowMs:WINDOW_MS,capacity:100000});
+  for(let i=0;i<rate*30;i++)data.add(i%1500,i*1000/rate);
+  const points=data.points;
+  assert.ok(points.at(-1).at-points[0].at>=WINDOW_MS-1000/rate);
+  assert.ok(points.at(-1).at-points[0].at<=WINDOW_MS);
+  assert.ok(points.length>rate*20);
+ }
+});
+test('drawing reduction bounds work and preserves narrow raw peaks and counts',()=>{
+ const points=Array.from({length:20480},(_,i)=>({at:i,raw:i===10001?1900:i===10002?-50:40,filtered:40}));
+ const reduced=displayPoints(points,0,20480);
+ assert.ok(reduced.length<=512*4);assert.ok(reduced.some(p=>p.raw===1900));assert.ok(reduced.some(p=>p.raw===-50));
+ assert.equal(windowDistribution(points).counts.red,1);assert.equal(points.length,20480);
+ const limited=new EmgSamples({windowMs:WINDOW_MS,capacity:100});for(let i=0;i<500;i++)limited.add(i,0);
+ assert.equal(limited.points.length,100);assert.equal(limited.dropped,400);
 });

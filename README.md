@@ -82,3 +82,7 @@ Accepted newline-terminated formats: `CH1:123`, `channel 1=123`, numeric CSV (CH
 The waveform retains the latest 512 received samples; the x-axis is sample order, not elapsed time. The raw signal is preserved alongside legacy display smoothing (alpha 0.22, step clamp 240). Export includes data source and browser receipt timestamps. Simulated exports remain labeled after stopping. No fatigue classification or automatic AI sharing is performed.
 
 Frontend tests cover formats, framing, bounded buffering, filtering, mocked serial disconnect/unplug/reconnect and mobile layout. Physical CH340/EMG acquisition has not been verified.
+
+### EMG receive and rendering timing
+
+Live serial capture uses a fixed 20.48-second browser-receive-time window, independently of baud rate and sample count. Rendering and UI updates are capped at 25 fps. Drawing reduces each of 512 time buckets to first/last/min/max points; window percentages and CSV export use retained raw samples, not the drawing subset. A 100,000-sample safety limit is reported if exceeded. The displayed receive rate is an estimate from browser arrivals, not a hardware ADC sample-rate measurement; the text protocol carries no device timestamps. Device acquisition rate is not changed. Pasted data retains a sample-order axis.

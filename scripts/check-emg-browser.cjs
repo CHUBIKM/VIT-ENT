@@ -14,6 +14,16 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
  await page.evaluate(()=>serialController.enqueue(new TextEncoder().encode('34\r\nCH1:50\n')));await page.waitForFunction(()=>document.querySelector('#emgCount').textContent==='2');
  await page.locator('#emgStop').click();await page.waitForFunction(()=>closedPorts===1);assert.equal(await page.locator('#emgConnect').isEnabled(),true);
  await page.locator('#emgConnect').click();await page.waitForFunction(()=>document.querySelector('#emgSource').textContent==='LIVE SERIAL');await page.evaluate(()=>serialController.error(new Error('unplugged')));await page.waitForFunction(()=>closedPorts===2);
+ await page.locator('#emgConnect').click();await page.waitForFunction(()=>document.querySelector('#emgSource').textContent==='LIVE SERIAL');
+ const timing=await page.evaluate(async()=>{
+  const proto=CanvasRenderingContext2D.prototype,original=proto.clearRect;let draws=0;
+  proto.clearRect=function(...args){if(this.canvas.id==='emgCanvas')draws++;return original.apply(this,args);};
+  const begin=performance.now();
+  try{for(let i=0;i<200;i++){serialController.enqueue(new TextEncoder().encode(('CH1:50\n').repeat(10)));await new Promise(r=>setTimeout(r,10));}await new Promise(r=>setTimeout(r,100));}
+  finally{proto.clearRect=original;}
+  return {draws,seconds:(performance.now()-begin)/1000};
+ });
+ assert.equal(await page.locator('#emgCount').textContent(),'2000');assert.ok(timing.draws<=Math.ceil(timing.seconds*25)+2);assert.match(await page.locator('#emgWindowCount').textContent(),/2000 samples/);assert.equal(await page.locator('#emgShare-green').textContent(),'100.0%');await page.locator('#emgStop').click();console.log('PASS high-rate receive and render cap',timing);
  assert.equal(await page.locator('#emgDemo').textContent(),'Start capture');await page.locator('#emgDemo').click();await page.waitForTimeout(100);await page.waitForFunction(()=>Number(document.querySelector('#emgCount').textContent)>20);await page.locator('#emgStop').click();
  assert.equal(await page.locator('#emgSource').textContent(),'SIMULATED · STOPPED');const pending=page.waitForEvent('download');await page.locator('#emgExport').click();const download=await pending;assert.equal(download.suggestedFilename(),'emg-simulated.csv');await download.saveAs(path.join(require('node:os').tmpdir(),'vit-emg-export.csv'));assert.match(fs.readFileSync(path.join(require('node:os').tmpdir(),'vit-emg-export.csv'),'utf8'),/simulated,/);
  const firstRun=fs.readFileSync(path.join(require('node:os').tmpdir(),'vit-emg-export.csv'),'utf8').trim().split('\n').slice(1).map(line=>line.split(',')[2]);
